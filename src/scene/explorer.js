@@ -38,7 +38,7 @@ export function createExplorer({ host, labelHost, quality = 'high', onSelect, on
     applyMaterials();
     rebuildMarkers();
     if (!keepCamera) resetCamera();
-    if (current.ready) { const sc = current; sc.ready.then(() => { if (current !== sc) return; sc.instances.forEach((i) => ensureBase(i.obj)); applyMaterials(); rebuildMarkers(); resetCamera(); }); }
+    if (current.ready) { const sc = current; sc.ready.then(() => { if (current !== sc) return; sc.instances.forEach((i) => ensureBase(i.obj)); applyMaterials(); rebuildMarkers(); resetCamera(); api.onReady?.(); }); }
   }
   function resetCamera(immediate = false) {
     if (!current) return;
@@ -187,5 +187,6 @@ export function createExplorer({ host, labelHost, quality = 'high', onSelect, on
   function views() { return current?.views || null; }
   function goToView(name) { const v = current?.views?.[name]; if (v) viewer.moveTo(v.pos, v.target); }
 
-  return { viewer, state, showScene, select, focus, reset, familiesInScene, setHighlight, setIsolate, setExplode: setExplodeAmount, setLabels, canExplode, setQuality, currentSceneMeta, views, goToView, rebuildMarkers, resetCamera };
+  const api = { viewer, state, showScene, select, focus, reset, familiesInScene, setHighlight, setIsolate, setExplode: setExplodeAmount, setLabels, canExplode, setQuality, currentSceneMeta, views, goToView, rebuildMarkers, resetCamera, onReady: null };
+  return api;
 }

@@ -1,7 +1,7 @@
 // Service worker: precachea la aplicación y sus recursos para uso sin conexión tras la primera carga.
 // Estrategia: network-first para código y datos (html/js/css/json: siempre la versión nueva si hay red, caché si no),
 // cache-first para assets pesados (imágenes, PDF, librerías). Sin recursos externos.
-const VERSION = 'vitalmet-rig-explorer-v6';
+const VERSION = 'vitalmet-rig-explorer-v7';
 const CORE = [
   './', './index.html', './style.css', './app.js', './manifest.webmanifest',
   './vendor/three.module.js', './vendor/three.core.js', './vendor/OrbitControls.js',

@@ -390,12 +390,22 @@ for (const f of families) for (const v of f.variants) if (extraWeb[v.id]) v.phot
 // Modelos 3D generados desde planos Vitalmet (build123d → GLB). Cada uno indica su plano de origen y simplificaciones.
 const models = {
   'bombas-vastagos': {
-    src: 'assets/modelos/01E-0002-vastago-national-8p80.glb', unit: 0.001, up: 'z',
+    src: 'assets/modelos/01E-0002-vastago-national-8p80.glb', unit: 0.001, up: 'y', lay: true,   // build123d exporta glTF con Y arriba; el vástago se muestra acostado
     plano: '01E-0002', rev: '00', fecha: '04-06-04',
     note: es_en('Modelo 3D generado con build123d a partir del plano Vitalmet 01E-0002 (Vástago p/bomba National 8-P-80, SAE 1045, L 525 mm). Cotas principales del plano; moleteado y rosca 1 3/8"-8UN simplificados; el diámetro del cuerpo entre moleteados se tomó Ø61: confirmar.', '3D model generated with build123d from Vitalmet drawing 01E-0002 (piston rod for National 8-P-80 pump, SAE 1045, L 525 mm). Main drawing dimensions; knurling and 1 3/8"-8UN thread simplified; body diameter between knurls assumed Ø61: to confirm.'),
   },
+  'union-fig1502': {
+    src: 'assets/modelos/08B-0020-union-2in-fig1502.glb', unit: 0.001, up: 'y',
+    plano: '08B-0020', rev: '00', fecha: '15-09-09',
+    parts: [
+      { name: 'extremoHembra', key: 'extremoHembra', dir: [0, 0, -1], dist: 0.05, color: '#c8242a' },
+      { name: 'extremoMacho', key: 'extremoMacho', dir: [0, 0, 1], dist: 0.06, color: '#c8242a' },
+      { name: 'tuerca', key: 'tuerca', dir: [0, 0, 1], dist: 0.13, color: '#2b4c8c' },
+    ],
+    note: es_en('Modelo 3D de la unión de 2" generado con build123d a partir de los planos Vitalmet 08B-0021 (extremo macho), 08B-0022 (extremo hembra) y 08B-0023 (collar), conjunto 08B-0020. Cotas principales del plano; roscas representadas como anillos; empaquetadura no modelada (sin plano); aletas del collar tomadas del croquis (sin cotas): confirmar. Los tamaños 3" y 4" no están modelados.', '3D model of the 2" union generated with build123d from Vitalmet drawings 08B-0021 (male sub), 08B-0022 (female sub) and 08B-0023 (nut), assembly 08B-0020. Main drawing dimensions; threads shown as rings; seal ring not modelled (no drawing); nut lugs taken from the sketch (not dimensioned): to confirm. 3" and 4" sizes not modelled.'),
+  },
 };
-for (const f of families) for (const v of f.variants) if (models[v.id]) { v.model = models[v.id]; v.specs.push(spec(es_en('Modelo 3D', '3D model'), models[v.id].note, 20, INF)); }
+for (const f of families) for (const v of f.variants) if (models[v.id]) { v.model = models[v.id]; v.specs.push(spec(es_en('Modelo 3D', '3D model'), models[v.id].note, v.page, INF)); }
 
 // Nombres de piezas de los despieces (ES/EN). Los de la VAE llevan el código 09E del plano de la página 14.
 export const partNames = {

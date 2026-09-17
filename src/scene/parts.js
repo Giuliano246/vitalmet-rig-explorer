@@ -374,12 +374,25 @@ export function buildModel(variant, { variantId } = {}) {
       root.updateMatrixWorld(true);
       const b0 = new THREE.Box3().setFromObject(root), s0 = b0.getSize(new THREE.Vector3());
       if ((m.up === 'z') || (m.up !== 'y' && s0.z > s0.y * 1.5)) root.rotation.x = -Math.PI / 2;   // Z arriba → Y arriba
+      if (m.lay) root.rotation.z = -Math.PI / 2;                                                    // piezas largas: acostadas (eje Y → X)
       root.traverse((o) => { if (o.isMesh) { o.material = M.machined(); o.castShadow = o.receiveShadow = Q.shadows; o.userData.partKey = 'modelo'; o.userData.vitalmet = true; if (variantId) o.userData.variantId = variantId; } });
+      // Piezas: un GLB puede traer varios nodos con nombre (model.parts); si no, todo el modelo es una pieza.
+      // `dir` se expresa en el sistema del modelo (Z arriba en los planos), porque la traslación de despiece se aplica en el nodo padre sin rotar.
+      const specs = m.parts || [{ name: null, key: 'modelo', dir: [0, 0, 1], dist: 0 }];
+      const parts = [];
+      for (const sp of specs) {
+        const obj = sp.name ? root.getObjectByName(sp.name) : root;
+        if (!obj) { console.warn('Modelo', m.src, ': no se encontró la pieza', sp.name); continue; }
+        const mat = sp.color ? M.painted(sp.color) : M.machined();
+        obj.traverse((o) => { if (o.isMesh) { o.material = mat; o.userData.partKey = sp.key; } });
+        obj.userData.partKey = sp.key; obj.userData.vitalmet = true;
+        parts.push({ key: sp.key, obj, home: obj.position.clone(), dir: V(...(sp.dir || [0, 0, 1])).normalize(), dist: sp.dist || 0, vitalmet: true, variantId });
+      }
       root.updateMatrixWorld(true);
       const b = new THREE.Box3().setFromObject(root); const c = b.getCenter(new THREE.Vector3());
       root.position.sub(c);
       g.add(root);
-      g.userData.parts = [{ key: 'modelo', obj: root, home: root.position.clone(), dir: V(0, 1, 0), dist: 0, vitalmet: true, variantId }];
+      g.userData.parts = parts.length ? parts : [{ key: 'modelo', obj: root, home: root.position.clone(), dir: V(0, 1, 0), dist: 0, vitalmet: true, variantId }];
       g.userData.radius = b.getSize(new THREE.Vector3()).length() / 2;
       resolve(g);
     }, undefined, reject);

@@ -54,7 +54,7 @@ Para agregar una variante nueva o cambiar geometrías hay que editar `data/catal
 ## Límites conocidos
 
 - Geometrías procedurales ilustrativas, no CAD; ubicaciones no validadas por un especialista.
-- Despieces: sólo la VAE está documentada (plano p. 14); el resto es esquemático y se rotula como tal.
+- Despieces: la VAE (plano p. 14) y la unión 2" FIG 1502 (planos 08B-0021/22/23, modelo GLB) están documentados; el resto es esquemático y se rotula como tal.
 - Offline: requiere una primera carga por http(s) (localhost o https). En `file://` no hay service worker.
 - Panel: guarda en `localStorage` del navegador; no hay usuarios ni sincronización.
 - Portal privado: no implementado (ver `../PENDIENTES.md`).
@@ -70,7 +70,7 @@ Sitio público: https://giuliano246.github.io/vitalmet-rig-explorer/ (GitHub Pag
 
 ## Modelos desde planos
 
-Ver `../cad/README.md`: los planos DWG se modelan con build123d (Python) y se exportan a GLB en `assets/modelos/`; la variante los referencia con `model` en `data/catalog.js`.
+Ver `../cad/README.md`: los planos DWG se modelan con build123d (Python) y se exportan a GLB en `assets/modelos/`; la variante los referencia con `model` en `data/catalog.js` (varias piezas por GLB con `model.parts`). Modelos incluidos: vástago 01E-0002 y unión doble 2" FIG 1502 (08B-0020).
 
 ## Documentación de la entrega
 

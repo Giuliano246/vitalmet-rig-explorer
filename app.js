@@ -89,6 +89,7 @@ function startExplorer() {
   if (new URLSearchParams(location.search).get('nowebgl') === '1') { enableFallback(); return; } // prueba del modo alternativo
   try {
     explorer = createExplorerSync(q);
+    explorer.onReady = () => updateTools();   // un modelo GLB termina de cargar: mostrar despiece/etiquetas
   } catch (err) {
     console.error('No se pudo iniciar WebGL:', err); enableFallback(); return;
   }
