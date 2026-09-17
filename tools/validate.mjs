@@ -25,6 +25,7 @@ for (const f of families) {
     for (const p of v.photos || []) { photos++; if (!existsSync(path.join(root, p.src))) errors.push(`${v.id}: foto inexistente ${p.src}`); if (!isLoc(p.caption)) errors.push(`${v.id}: leyenda sin ES/EN ${p.src}`); }
     if (!v.photos?.length && !f.photos?.length) warnings.push(`${v.id}: sin fotos`);
     if (v.explode) for (const k of v.explode.parts) if (!partNames[k]) warnings.push(`${v.id}: pieza de despiece sin nombre: ${k}`);
+    if (v.model && !existsSync(path.join(root, v.model.src))) errors.push(`${v.id}: modelo inexistente ${v.model.src}`);
     if (v.matrix) { for (const r of v.matrix.rows) if (r.length !== v.matrix.series.length + 1) errors.push(`${v.id}: fila de matriz inconsistente ${r[0]}`); }
   }
 }

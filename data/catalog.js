@@ -387,6 +387,16 @@ const extraWeb = {
 };
 for (const f of families) for (const v of f.variants) if (extraWeb[v.id]) v.photos.push(...extraWeb[v.id]);
 
+// Modelos 3D generados desde planos Vitalmet (build123d → GLB). Cada uno indica su plano de origen y simplificaciones.
+const models = {
+  'bombas-vastagos': {
+    src: 'assets/modelos/01E-0002-vastago-national-8p80.glb', unit: 0.001, up: 'z',
+    plano: '01E-0002', rev: '00', fecha: '04-06-04',
+    note: es_en('Modelo 3D generado con build123d a partir del plano Vitalmet 01E-0002 (Vástago p/bomba National 8-P-80, SAE 1045, L 525 mm). Cotas principales del plano; moleteado y rosca 1 3/8"-8UN simplificados; el diámetro del cuerpo entre moleteados se tomó Ø61: confirmar.', '3D model generated with build123d from Vitalmet drawing 01E-0002 (piston rod for National 8-P-80 pump, SAE 1045, L 525 mm). Main drawing dimensions; knurling and 1 3/8"-8UN thread simplified; body diameter between knurls assumed Ø61: to confirm.'),
+  },
+};
+for (const f of families) for (const v of f.variants) if (models[v.id]) { v.model = models[v.id]; v.specs.push(spec(es_en('Modelo 3D', '3D model'), models[v.id].note, 20, INF)); }
+
 // Nombres de piezas de los despieces (ES/EN). Los de la VAE llevan el código 09E del plano de la página 14.
 export const partNames = {
   // Unión / codo / pup joint (esquemático, basado en fotos p. 4–16)

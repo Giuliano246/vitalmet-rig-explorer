@@ -38,6 +38,7 @@ export function createExplorer({ host, labelHost, quality = 'high', onSelect, on
     applyMaterials();
     rebuildMarkers();
     if (!keepCamera) resetCamera();
+    if (current.ready) { const sc = current; sc.ready.then(() => { if (current !== sc) return; sc.instances.forEach((i) => ensureBase(i.obj)); applyMaterials(); rebuildMarkers(); resetCamera(); }); }
   }
   function resetCamera(immediate = false) {
     if (!current) return;

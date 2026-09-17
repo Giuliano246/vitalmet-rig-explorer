@@ -68,6 +68,10 @@ Para agregar una variante nueva o cambiar geometrías hay que editar `data/catal
 
 Sitio público: https://giuliano246.github.io/vitalmet-rig-explorer/ (GitHub Pages, repo público `Giuliano246/vitalmet-rig-explorer`, gratis). Para actualizarlo tras cambiar `proyecto/`: `tools/deploy-pages.sh "mensaje"`. El sitio tarda alrededor de un minuto en reflejar cada push.
 
+## Modelos desde planos
+
+Ver `../cad/README.md`: los planos DWG se modelan con build123d (Python) y se exportan a GLB en `assets/modelos/`; la variante los referencia con `model` en `data/catalog.js`.
+
 ## Documentación de la entrega
 
 En la carpeta superior: `CAMBIOS.md`, `PRUEBAS.md`, `PENDIENTES.md`, `FUENTES-Y-LICENCIAS.md`, `DATOS-POR-CONFIRMAR.md`.

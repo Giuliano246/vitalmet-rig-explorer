@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { M, COLORS } from './materials.js';
 import { Q, mesh, box, cyl, torus, lathe, ring, lugNut, hexNut, beam, groupOf } from './builders.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const IN = 0.0254;
@@ -362,10 +363,35 @@ export function buildFluidEnd({ variantIds = {} } = {}) {
   return g;
 }
 
+// Modelo GLB (exportado desde CAD): se carga de forma asíncrona sobre un grupo; g.userData.modelPromise resuelve al terminar.
+const gltfLoader = new GLTFLoader();
+export function buildModel(variant, { variantId } = {}) {
+  const g = new THREE.Group(); const m = variant.model;
+  g.userData.parts = []; g.userData.radius = 0.5; g.userData.axis = 'y';
+  g.userData.modelPromise = new Promise((resolve, reject) => {
+    gltfLoader.load(m.src, (gltf) => {
+      const root = gltf.scene; root.scale.setScalar(m.unit ?? 0.001);
+      root.updateMatrixWorld(true);
+      const b0 = new THREE.Box3().setFromObject(root), s0 = b0.getSize(new THREE.Vector3());
+      if ((m.up === 'z') || (m.up !== 'y' && s0.z > s0.y * 1.5)) root.rotation.x = -Math.PI / 2;   // Z arriba → Y arriba
+      root.traverse((o) => { if (o.isMesh) { o.material = M.machined(); o.castShadow = o.receiveShadow = Q.shadows; o.userData.partKey = 'modelo'; o.userData.vitalmet = true; if (variantId) o.userData.variantId = variantId; } });
+      root.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(root); const c = b.getCenter(new THREE.Vector3());
+      root.position.sub(c);
+      g.add(root);
+      g.userData.parts = [{ key: 'modelo', obj: root, home: root.position.clone(), dir: V(0, 1, 0), dist: 0, vitalmet: true, variantId }];
+      g.userData.radius = b.getSize(new THREE.Vector3()).length() / 2;
+      resolve(g);
+    }, undefined, reject);
+  });
+  return g;
+}
+
 // Builder por variante (usado en escenas y en el estudio).
 export function buildVariant(variant, opts = {}) {
   const geo = variant.geometry || {};
   const o = { variantId: variant.id, ...opts };
+  if (variant.model && opts.preferModel !== false) return buildModel(variant, o);
   switch (geo.type) {
     case 'union': return buildUnion({ fig: geo.fig, size: opts.size ?? 3, nut: geo.nut, body: geo.body, lugs: geo.lugs ?? 3, ...o });
     case 'pupjoint': return buildPupJoint({ size: opts.size ?? 3, len: opts.len ?? 2.4, nut: geo.nut, body: geo.body, ...o });

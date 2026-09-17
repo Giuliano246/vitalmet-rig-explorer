@@ -70,9 +70,10 @@ function updateTools() {
   $('explode-wrap').hidden = !can; $('labels-toggle').hidden = !can;
   const note = $('explode-note');
   const v = getVariant(state.variantId);
-  if (can && (meta.studio || meta.id === 'mudpump') && (explorer.state.explode > 0.04 || meta.studio)) {
+  if ((can || (v?.model && meta.studio)) && (meta.studio || meta.id === 'mudpump') && (explorer.state.explode > 0.04 || meta.studio)) {
     let text = '';
     if (meta.id === 'mudpump') text = t('explode.mudpump');
+    else if (v?.model && meta.studio) text = L(v.model.note);
     else if (v?.geometry?.type === 'drum') text = t('explode.drum');
     else if (v?.explode?.documented) text = t('explode.documented', { page: v.explode.source });
     else text = t('explode.schematic', { page: v?.explode?.source ?? v?.page ?? '' });
