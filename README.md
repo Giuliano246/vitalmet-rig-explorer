@@ -64,6 +64,10 @@ Para agregar una variante nueva o cambiar geometrías hay que editar `data/catal
 
 `?lang=es|en` · `?familia=<id>` (union, pup-joint, codo, codo-giratorio, valvula, anillo-bx, campana, bombas) · `?nowebgl=1`
 
+## Publicación (MVP)
+
+Sitio público: https://giuliano246.github.io/vitalmet-rig-explorer/ (GitHub Pages, repo público `Giuliano246/vitalmet-rig-explorer`, gratis). Para actualizarlo tras cambiar `proyecto/`: `tools/deploy-pages.sh "mensaje"`. El sitio tarda alrededor de un minuto en reflejar cada push.
+
 ## Documentación de la entrega
 
 En la carpeta superior: `CAMBIOS.md`, `PRUEBAS.md`, `PENDIENTES.md`, `FUENTES-Y-LICENCIAS.md`, `DATOS-POR-CONFIRMAR.md`.
