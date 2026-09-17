@@ -1,0 +1,12 @@
+{
+  "name": "Vitalmet Rig Explorer",
+  "short_name": "Rig Explorer",
+  "description": "Productos Vitalmet S.A. en un equipo de perforación y en una línea de alta presión, con fichas del catálogo.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f5f3",
+  "theme_color": "#1f3038",
+  "lang": "es",
+  "icons": [{ "src": "assets/logo.png", "sizes": "627x268", "type": "image/png", "purpose": "any" }]
+}

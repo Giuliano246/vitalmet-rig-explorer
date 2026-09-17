@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f3038">
+<meta name="description" content="Vitalmet Rig Explorer: explorá los productos Vitalmet S.A. en un equipo de perforación y en una línea de alta presión, con fichas del catálogo.">
+<title>Vitalmet — Rig Explorer</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+<a class="skip" href="#products" data-i18n="nav.products">PRODUCTOS VITALMET</a>
+<header class="topbar">
+  <a class="brand" href="./" aria-label="Vitalmet"><img src="assets/logo.png" alt="Vitalmet" width="96" height="41"><span class="brand-sub">S.A.</span></a>
+  <div class="divider"></div>
+  <div class="header-title"><span>RIG EXPLORER</span><small data-i18n="app.subtitle">Catálogo en contexto</small></div>
+  <nav class="scene-tabs" aria-label="Escenas">
+    <button type="button" data-scene="rig" aria-pressed="true"><span class="ico">⛏</span><span data-i18n="scene.rig">Equipo de perforación</span></button>
+    <button type="button" data-scene="hpline" aria-pressed="false"><span class="ico">⟿</span><span data-i18n="scene.hpline">Línea de alta presión</span></button>
+    <button type="button" data-scene="mudpump" aria-pressed="false"><span class="ico">⚙</span><span data-i18n="scene.mudpump">Bomba de lodo</span></button>
+    <button type="button" data-scene="studio" aria-pressed="false"><span class="ico">◎</span><span data-i18n="scene.studio">Pieza en detalle</span></button>
+  </nav>
+  <div class="header-actions">
+    <button type="button" id="quote-open" class="pill"><span>🗒</span><span data-i18n="quote.open">Cotización</span><b id="quote-count" hidden>0</b></button>
+    <button type="button" id="admin-open" class="pill ghost"><span>✎</span><span data-i18n="admin.open">Editar contenido</span></button>
+    <button type="button" id="lang-toggle" class="pill ghost" aria-label="Cambiar idioma"><span data-i18n="lang.switch">English</span></button>
+    <span class="prototype" data-i18n="app.demo">DEMO INTERACTIVA</span>
+  </div>
+</header>
+
+<main>
+  <aside class="navigator" aria-label="Listado de productos">
+    <div class="eyebrow" data-i18n="nav.eyebrow">INGENIERÍA EN CADA CONEXIÓN</div>
+    <h1 data-i18n="nav.h1">Nuestras piezas. En su lugar.</h1>
+    <p class="intro" data-i18n="nav.intro">Explorá los productos Vitalmet en un equipo de perforación y en una línea de alta presión.</p>
+    <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" data-i18n-attr="placeholder:nav.search,aria-label:nav.search" placeholder="Buscar pieza, figura o presión…" autocomplete="off"></label>
+    <div class="list-title"><span data-i18n="nav.products">PRODUCTOS VITALMET</span><span id="count">08</span></div>
+    <nav id="products" aria-label="Productos"></nav>
+    <p id="no-results" class="muted" hidden></p>
+    <div class="sidebar-foot"><span class="dot"></span><span data-i18n="nav.foot">Fabricación argentina</span><p data-i18n="nav.foot2">Precisión que conecta la operación.</p><p id="offline-status" class="muted"></p></div>
+  </aside>
+
+  <section class="stage" aria-label="Explorador tridimensional">
+    <div class="stage-head">
+      <div><span class="eyebrow" id="scene-eyebrow" data-i18n="scene.rig">Equipo de perforación</span><h2 id="view-title" data-i18n="scene.overview">Vista general</h2></div>
+      <div class="stage-head-actions">
+        <button type="button" id="systems-toggle" aria-pressed="false" aria-controls="systems-panel"><span>☰</span> <span data-i18n="systems.show">Ver sistemas</span></button>
+        <button type="button" id="reset" data-i18n-attr="title:tools.reset">↺ <span data-i18n="tools.reset">Restablecer vista</span></button>
+      </div>
+    </div>
+    <div id="canvas"><div id="loading">Preparando el equipo 3D…</div></div>
+    <div id="labels" aria-hidden="true"></div>
+    <div id="hover-tip" class="hover-tip" hidden></div>
+    <div id="explode-note" class="explode-note" hidden></div>
+    <aside id="systems-panel" class="systems-panel" hidden aria-label="Sistemas del equipo"></aside>
+    <div id="fallback" class="fallback" hidden><h3 data-i18n="fallback.title">La vista 3D no está disponible en este navegador</h3><p data-i18n="fallback.body"></p><img id="fallback-page" alt=""></div>
+    <div class="legend"><span><i class="orange"></i><span data-i18n="scene.legend.vitalmet">Productos Vitalmet</span></span><span><i></i><span data-i18n="scene.legend.context">Equipo de contexto (no Vitalmet)</span></span></div>
+    <div class="view-tools" role="toolbar" aria-label="Herramientas 3D">
+      <button type="button" id="highlight" aria-pressed="true">◉ <span data-i18n="tools.highlight">Destacar Vitalmet</span></button>
+      <button type="button" id="isolate" aria-pressed="false">◇ <span data-i18n="tools.isolate">Aislar pieza</span></button>
+      <button type="button" id="focus">⊕ <span data-i18n="tools.focus">Acercar</span></button>
+      <label id="explode-wrap" class="explode"><span data-i18n="tools.explode">Despiece</span><input id="explode" type="range" min="0" max="100" value="0" data-i18n-attr="aria-label:tools.explode"></label>
+      <button type="button" id="labels-toggle" aria-pressed="true">🏷 <span data-i18n="tools.labels">Etiquetas</span></button>
+      <label class="quality"><span data-i18n="tools.quality">Calidad 3D</span><select id="quality" data-i18n-attr="aria-label:tools.quality"><option value="high" data-i18n="quality.high">Alta</option><option value="medium" data-i18n="quality.medium">Media</option><option value="low" data-i18n="quality.low">Baja</option></select></label>
+    </div>
+    <div class="stage-bottom"><span data-i18n="scene.hint">Arrastrá para girar · Rueda para acercar · Clic en una pieza para seleccionarla</span><span data-i18n="scene.disclaimer">MODELO ILUSTRATIVO · SIN ESCALA</span></div>
+  </section>
+
+  <aside class="inspector" aria-label="Ficha del producto" id="inspector">
+    <div class="inspector-top"><span data-i18n="inspector.top">FICHA DEL PRODUCTO</span><span id="part-number">01 / 08</span></div>
+    <div class="photo">
+      <button type="button" id="photo-open" class="photo-main" data-i18n-attr="aria-label:ui.photoOpen"><img id="product-image" alt=""></button>
+      <div id="photo-thumbs" class="thumbs" role="list"></div>
+      <p id="photo-caption" class="photo-caption"></p>
+    </div>
+    <div class="detail" aria-live="polite">
+      <span class="tag" data-i18n="inspector.made">● FABRICADO POR VITALMET</span>
+      <h2 id="product-title"></h2>
+      <p id="description"></p>
+      <label class="detail-label" for="variant" data-i18n="inspector.variant">MODELO / VARIANTE</label>
+      <select id="variant"></select>
+      <div class="location"><span data-i18n="inspector.role">FUNCIÓN EN EL CONJUNTO</span><strong id="function"></strong></div>
+      <section class="technical" aria-label="Datos del catálogo">
+        <div class="detail-label" data-i18n="inspector.specs">DATOS TÉCNICOS</div>
+        <dl id="specifications"></dl>
+        <div id="sizes" class="sizes"></div>
+        <div id="matrix" class="matrix" hidden></div>
+        <a id="catalog-source" target="_blank" rel="noopener"></a>
+        <details class="page-preview"><summary data-i18n="inspector.pageOriginal">Ver página original</summary><a id="source-preview" target="_blank" rel="noopener"><img id="source-image" alt=""></a><a id="pdf-link" href="assets/catalogo-vitalmet.pdf" target="_blank" rel="noopener" data-i18n="ui.pdf">Abrir PDF completo</a></details>
+      </section>
+      <div class="actions">
+        <button type="button" id="locate" class="primary"><span data-i18n="inspector.locate">Ver en el equipo</span><span>↗</span></button>
+        <button type="button" id="studio" class="secondary"><span data-i18n="inspector.studio">Ver pieza en detalle / despiece</span></button>
+      </div>
+      <form id="add-quote" class="add-quote">
+        <div class="row">
+          <label><span data-i18n="inspector.size">Medida / figura</span><select id="quote-size"></select></label>
+          <label class="qty"><span data-i18n="inspector.qty">Cantidad</span><input id="quote-qty" type="number" min="1" value="1" inputmode="numeric"></label>
+        </div>
+        <button type="submit" class="primary commercial"><span data-i18n="inspector.addQuote">Agregar a la solicitud de cotización</span><span>＋</span></button>
+        <p id="add-feedback" class="feedback" hidden></p>
+      </form>
+      <p class="note" data-i18n="inspector.note"></p>
+    </div>
+  </aside>
+</main>
+
+<dialog id="photo-dialog"><button type="button" id="photo-close" class="dialog-close" data-i18n-attr="aria-label:ui.close">✕</button><img id="large-photo" alt=""><p id="large-title"></p></dialog>
+<dialog id="quote-dialog" class="panel-dialog"><div class="panel-head"><h2 data-i18n="quote.title">Solicitud de cotización</h2><button type="button" class="dialog-close" data-close data-i18n-attr="aria-label:ui.close">✕</button></div><div id="quote-body" class="panel-body"></div></dialog>
+<dialog id="admin-dialog" class="panel-dialog wide"><div class="panel-head"><h2 data-i18n="admin.title">Panel de contenido</h2><button type="button" class="dialog-close" data-close data-i18n-attr="aria-label:ui.close">✕</button></div><div id="admin-body" class="panel-body"></div></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
