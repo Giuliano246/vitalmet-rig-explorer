@@ -96,7 +96,8 @@ export function createExplorer({ host, labelHost, quality = 'high', onSelect, on
       }
     }
   }
-  viewer.onFrame(() => {
+  viewer.onFrame((now) => {
+    current?.animate?.(now);
     const w = host.clientWidth, h = host.clientHeight;
     for (const m of markers) {
       if (m.kind === 'family') {
@@ -175,11 +176,7 @@ export function createExplorer({ host, labelHost, quality = 'high', onSelect, on
 
   function setQuality(name) {
     if (!QUALITY[name]) return;
-    state.quality = name; const q = applyQuality(name);
-    viewer.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q.dpr));
-    viewer.renderer.shadowMap.enabled = q.shadows; viewer.sun.castShadow = q.shadows;
-    if (viewer.sun.shadow.map) { viewer.sun.shadow.map.dispose(); viewer.sun.shadow.map = null; }
-    viewer.sun.shadow.mapSize.set(q.shadow, q.shadow);
+    state.quality = name; viewer.setQualityLive(name);
     for (const k of Object.keys(cache)) delete cache[k];
     viewer.rebuildTerrain();
     const id = state.sceneId; if (id) showScene(id, { keepCamera: true });

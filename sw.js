@@ -1,7 +1,7 @@
 // Service worker: precachea la aplicación y sus recursos para uso sin conexión tras la primera carga.
 // Estrategia: network-first para código y datos (html/js/css/json: siempre la versión nueva si hay red, caché si no),
 // cache-first para assets pesados (imágenes, PDF, librerías). Sin recursos externos.
-const VERSION = 'vitalmet-rig-explorer-v4';
+const VERSION = 'vitalmet-rig-explorer-v5';
 const CORE = [
   './', './index.html', './style.css', './app.js', './manifest.webmanifest',
   './vendor/three.module.js', './vendor/three.core.js', './vendor/OrbitControls.js',
@@ -10,6 +10,7 @@ const CORE = [
   './src/scene/materials.js', './src/scene/environment.js', './src/scene/builders.js', './src/scene/parts.js', './src/scene/viewer.js', './src/scene/explorer.js',
   './src/scene/scenes/rig.js', './src/scene/scenes/hpline.js', './src/scene/scenes/mudpump.js', './src/scene/scenes/studio.js',
   './assets/logo.png', './assets/catalogo-vitalmet.pdf',
+  ...['loaders/GLTFLoader.js', 'math/SimplexNoise.js', 'postprocessing/EffectComposer.js', 'postprocessing/GTAOPass.js', 'postprocessing/MaskPass.js', 'postprocessing/OutputPass.js', 'postprocessing/Pass.js', 'postprocessing/RenderPass.js', 'postprocessing/SMAAPass.js', 'postprocessing/ShaderPass.js', 'postprocessing/UnrealBloomPass.js', 'shaders/CopyShader.js', 'shaders/GTAOShader.js', 'shaders/LuminosityHighPassShader.js', 'shaders/OutputShader.js', 'shaders/PoissonDenoiseShader.js', 'shaders/SMAAShader.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js'].map((f) => './vendor/addons/' + f),
 ];
 const PAGES = Array.from({ length: 21 }, (_, i) => `./assets/paginas/pagina-${String(i + 1).padStart(2, '0')}.webp`);
 

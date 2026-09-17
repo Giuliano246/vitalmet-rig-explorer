@@ -19,11 +19,25 @@ export const COLORS = {
   ground: '#c2c3bd',
 };
 
+// Mapa de rugosidad "desgastado" (ruido) compartido: quita el aspecto plástico de las superficies pintadas.
+let _wear = null;
+export function wearTexture() {
+  if (_wear) return _wear;
+  const s = 256, c = document.createElement('canvas'); c.width = c.height = s; const ctx = c.getContext('2d');
+  ctx.fillStyle = '#b4b4b4'; ctx.fillRect(0, 0, s, s);
+  let seed = 99; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const img = ctx.getImageData(0, 0, s, s), d = img.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (rnd() - 0.5) * 70; d[i] = d[i + 1] = d[i + 2] = Math.max(175, Math.min(255, 228 + n)); }
+  ctx.putImageData(img, 0, 0);
+  for (let k = 0; k < 400; k++) { ctx.fillStyle = `rgba(255,255,255,${0.15 + rnd() * 0.3})`; ctx.beginPath(); ctx.ellipse(rnd() * s, rnd() * s, 2 + rnd() * 14, 1 + rnd() * 5, rnd() * 3, 0, Math.PI * 2); ctx.fill(); }
+  _wear = new THREE.CanvasTexture(c); _wear.wrapS = _wear.wrapT = THREE.RepeatWrapping; _wear.repeat.set(2, 2);
+  return _wear;
+}
 const cache = new Map();
-export function mat(color, { metalness = 0.55, roughness = 0.45, emissive = null, emissiveIntensity = 0, transparent = false, opacity = 1, flat = false, side = THREE.FrontSide } = {}) {
-  const key = JSON.stringify([color, metalness, roughness, emissive, emissiveIntensity, transparent, opacity, flat, side]);
+export function mat(color, { metalness = 0.55, roughness = 0.45, emissive = null, emissiveIntensity = 0, transparent = false, opacity = 1, flat = false, side = THREE.FrontSide, wear = true } = {}) {
+  const key = JSON.stringify([color, metalness, roughness, emissive, emissiveIntensity, transparent, opacity, flat, side, wear]);
   if (cache.has(key)) return cache.get(key);
-  const m = new THREE.MeshStandardMaterial({ color, metalness, roughness, transparent, opacity, flatShading: flat, side, envMapIntensity: 0.9 });
+  const m = new THREE.MeshStandardMaterial({ color, metalness, roughness, transparent, opacity, flatShading: flat, side, envMapIntensity: 0.9, roughnessMap: wear && !transparent ? wearTexture() : null });
   if (emissive) { m.emissive = new THREE.Color(emissive); m.emissiveIntensity = emissiveIntensity; }
   cache.set(key, m);
   return m;

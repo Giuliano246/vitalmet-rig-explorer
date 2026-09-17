@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { M, COLORS } from '../materials.js';
 import { box, cyl, beam, bar, lathe, ring, torus, pipeRun, hose, flange, railing, ladder, stairs, lattice, tank, groupOf, sphere, setShadows } from '../builders.js';
 import { buildUnion, buildPupJoint, buildElbow, buildSwivel, buildPlugValve, buildBX, buildDrum, buildPumpPart } from '../parts.js';
-import { buildPad, buildCampExtras } from '../environment.js';
+import { buildPad, buildCampExtras, gratingTexture, corrugatedTexture } from '../environment.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -47,7 +47,7 @@ export function buildRigScene() {
   const rigRed = M.rigRed(), grey = M.rigGrey(), dark = M.steelDark(), conc = M.concrete(), safety = M.safety();
   // Playón de ripio con talud, camino de acceso, casillas, camionetas y contenedores (contexto).
   context.add(buildPad({ w: 110, d: 90, h: 0.5, x: -4, z: 2, road: true }));
-  context.add(buildCampExtras());
+  const camp = buildCampExtras(); context.add(camp);
 
   // ---------- Subestructura y piso ----------
   const FL = 7.5; // altura del piso
@@ -55,12 +55,15 @@ export function buildRigScene() {
   for (const z of [-5, 5]) { context.add(bar([-6, FL - 0.45, z], [6, FL - 0.45, z], 0.5, 0.7, rigRed)); for (const [a, b] of [[-6, 0], [0, 6]]) { context.add(beam([a, 0.3, z], [b, FL - 0.8, z], 0.09, grey)); context.add(beam([b, 0.3, z], [a, FL - 0.8, z], 0.09, grey)); } }
   for (const x of [-6, 6]) { context.add(bar([x, FL - 0.45, -5], [x, FL - 0.45, 5], 0.5, 0.7, rigRed)); context.add(beam([x, 0.3, -5], [x, FL - 0.8, 5], 0.09, grey)); context.add(beam([x, 0.3, 5], [x, FL - 0.8, -5], 0.09, grey)); }
   context.add(box(13, 0.3, 11, dark, { pos: [0, FL - 0.15, 0] }));
+  const grating = new THREE.MeshStandardMaterial({ map: gratingTexture(), color: '#9aa0a4', metalness: 0.7, roughness: 0.55 }); grating.map.repeat.set(26, 22);
+  { const gr = box(13, 0.04, 11, grating, { pos: [0, FL + 0.02, 0] }); context.add(gr); }
+  const corr = new THREE.MeshStandardMaterial({ map: corrugatedTexture('#9aa4a8'), roughness: 0.7, metalness: 0.35 }); corr.map.repeat.set(7, 1);
   context.add(ring(0.55, 1.15, 0.12, M.castIron(), { pos: [0, FL + 0.06, 0], seg: 48 }));   // mesa rotaria
   context.add(cyl(0.2, 0.1, M.castIron(), { pos: [1.6, FL + 0.05, 1.3], seg: 16 }));            // mousehole
   context.add(railing([[-6.5, -5.5], [6.5, -5.5], [6.5, 5.5], [1.4, 5.5]], FL, 1.1));
   context.add(railing([[-1.4, 5.5], [-6.5, 5.5], [-6.5, -5.5]], FL, 1.1));
   // Casilla del perforador y consola.
-  context.add(box(2.8, 2.7, 7, M.painted('#8e989c'), { pos: [7.9, FL + 1.35, -0.5] }));
+  context.add(box(2.8, 2.7, 7, corr, { pos: [7.9, FL + 1.35, -0.5] }));
   context.add(box(2.8, 0.15, 7, dark, { pos: [7.9, FL + 2.75, -0.5] }));
   context.add(box(0.9, 1.1, 1.4, dark, { pos: [4.9, FL + 0.55, 1.6] }));
   for (const z of [-2.5, 0.5]) context.add(box(0.05, 0.9, 1.2, M.glass(), { pos: [6.48, FL + 1.6, z] }));
@@ -105,6 +108,18 @@ export function buildRigScene() {
   context.add(box(4.6, 2.4, 0.06, M.painted('#7c8a91'), { pos: [0, MB + 1.4, -3.4] }));
   context.add(ladder(2.55, 1.5, FL + 0.2, top - 3, [1, 0], 0.5, grey, true));
 
+  // Plataforma de corona con baranda y luces de mástil.
+  context.add(railing([[-1.6, -1.3], [1.6, -1.3], [1.6, 1.3], [-1.6, 1.3], [-1.6, -1.3]], top + 1.1, 1.0));
+  for (let y = FL + 6; y < top; y += 8) for (const sx of [-1, 1]) context.add(box(0.35, 0.25, 0.25, M.white(), { pos: [sx * (2.35 - (y - FL) / H * 1.4), y, 1.9 - (y - FL) / H * 0.95] }));
+  // Pasarela con rejilla y baranda alrededor del BOP (nivel intermedio de la subestructura).
+  { const wk = new THREE.MeshStandardMaterial({ map: gratingTexture(), color: '#9aa0a4', metalness: 0.7, roughness: 0.55 }); wk.map.repeat.set(20, 4);
+    for (const [px, pz, w, d] of [[0, -4.3, 11.6, 1.2], [0, 4.3, 11.6, 1.2], [-5.2, 0, 1.2, 7.4], [5.2, 0, 1.2, 7.4]]) context.add(box(w, 0.06, d, wk, { pos: [px, 3.3, pz] }));
+    context.add(railing([[-5.8, -4.9], [5.8, -4.9], [5.8, 4.9], [-5.8, 4.9], [-5.8, -4.9]], 3.33, 1.05));
+    context.add(railing([[-4.6, -3.7], [4.6, -3.7], [4.6, 3.7], [-4.6, 3.7], [-4.6, -3.7]], 3.33, 1.05));
+    context.add(ladder(-5.9, 2.2, 0.2, 3.35, [-1, 0], 0.5, grey, false)); }
+  // Pileta de lodo revestida y bateas de tubería junto al catwalk.
+  context.add(box(9, 0.9, 6, M.painted('#3a3f3c'), { pos: [-30, 0.45, -8] })); context.add(box(8.4, 0.05, 5.4, M.painted('#4d5a4a'), { pos: [-30, 0.92, -8] }));
+  for (const [tx, tz] of [[-7, 16], [7, 16]]) { context.add(box(2.2, 0.9, 12, M.painted('#7f5a3a'), { pos: [tx, 0.45, tz] })); for (let k = 0; k < 5; k++) context.add(cyl(0.065, 11.5, M.steel(), { pos: [tx - 0.8 + k * 0.4, 0.95, tz], rot: [Math.PI / 2, 0, 0], seg: 8 })); }
   // ---------- Malacate y campanas de freno ----------
   const DW = V(-3.9, FL, 0);
   context.add(box(3.8, 0.9, 3.4, rigRed, { pos: [DW.x, DW.y + 0.45, DW.z] }));
@@ -179,14 +194,15 @@ export function buildRigScene() {
   for (const p of pumps) context.add(pipeRun([[p.position.x - 0.25, 0.5, p.position.z + 1.3], [p.position.x - 0.25, 0.5, -11.5], [p.position.x - 0.25, 1.2, -11.5]], 0.16, dark));
   for (const x of [-20.5, -12, -3.5]) { const t = tank(8, 3, 3.4, grey, 5); t.position.set(x, 0, -13.6); context.add(t); context.add(box(0.4, 0.4, 0.4, dark, { pos: [x - 2.5, 3.4, -13.6] })); context.add(cyl(0.3, 0.9, dark, { pos: [x + 2.5, 3.45, -13.6], seg: 16 })); }
   context.add(railing([[-24.5, -15.4], [0.6, -15.4], [0.6, -11.8], [-24.5, -11.8], [-24.5, -15.4]], 3.0, 1.0));
+  { const wk = grating.clone(); wk.map = gratingTexture(); wk.map.repeat.set(40, 3); context.add(box(25, 0.05, 1.2, wk, { pos: [-12, 3.02, -11.2] })); context.add(ladder(-24.9, -11.2, 0.2, 3.1, [-1, 0], 0.5, grey, false)); context.add(ladder(0.9, -11.2, 0.2, 3.1, [1, 0], 0.5, grey, false)); }
   context.add(box(3.2, 1.4, 2.2, M.painted('#5e6a70'), { pos: [-5.5, 3.9, -13.2] }));           // zaranda
   context.add(box(2.8, 0.08, 1.8, grey, { pos: [-5.5, 4.55, -13.2], rot: [0, 0, 0.12] }));
   context.add(box(2.4, 0.5, 0.9, M.painted('#5e6a70'), { pos: [-9.5, 3.55, -13.2] }));
   // Casa de fuerza, VFD y chimeneas.
-  context.add(box(3.6, 3.3, 12, M.painted('#9aa4a8'), { pos: [-27, 1.65, 6] }));
+  { const c2 = corr.clone(); c2.map = corrugatedTexture('#9aa4a8'); c2.map.repeat.set(12, 1); context.add(box(3.6, 3.3, 12, c2, { pos: [-27, 1.65, 6] })); for (const z of [2.5, 6, 9.5]) context.add(box(0.1, 2.2, 2.6, M.castIron(), { pos: [-25.15, 1.6, z] })); }
   context.add(box(3.6, 0.2, 12, dark, { pos: [-27, 3.4, 6] }));
   for (const z of [2, 6, 10]) context.add(cyl(0.28, 2.0, dark, { pos: [-27.8, 4.4, z], seg: 16 }));
-  context.add(box(3, 3.2, 6, M.painted('#9aa4a8'), { pos: [-21.5, 1.6, 8] }));
+  { const c3 = corr.clone(); c3.map = corrugatedTexture('#aeb6b8'); c3.map.repeat.set(6, 1); context.add(box(3, 3.2, 6, c3, { pos: [-21.5, 1.6, 8] })); }
   for (const [x, z] of [[-24, 3], [-24, 9], [-23, 5]]) context.add(box(0.5, 0.2, 5, dark, { pos: [x, 0.3, z] }));
   // Tanques de agua y combustible.
   for (const z of [7.5, 11]) { context.add(cyl(1.2, 6, M.painted('#aeb6b8'), { pos: [14, 1.55, z], rot: [0, 0, Math.PI / 2], seg: 32 })); for (const x of [12, 16]) context.add(box(0.5, 0.6, 2.2, dark, { pos: [x, 0.3, z] })); }
@@ -196,7 +212,7 @@ export function buildRigScene() {
   setShadows(context);
   instances.forEach((i) => setShadows(i.obj));
   return {
-    id: 'rig', group, context, instances, environment: 'desert',
+    id: 'rig', group, context, instances, environment: 'desert', animate: (now) => camp.userData.animate?.(now / 1000),
     camera: { pos: V(74, 40, 82), target: V(-5, 14, -4) },
     views: { hoisting: { pos: V(10, 12, 12), target: V(-3, 9.5, 0) }, circulating: { pos: V(-8, 8, 8), target: V(-11, 3.5, -2) }, wellcontrol: { pos: V(9, 5, 7), target: V(3, 3, -2) } },
   };

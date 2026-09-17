@@ -1,14 +1,19 @@
-// Visor Three.js: renderer, cámara, controles, iluminación, entorno, suelo, transiciones y proyección de etiquetas.
+// Visor Three.js: renderer, cámara, controles, iluminación, entorno PMREM, postprocesado (GTAO), suelo/terreno,
+// transiciones y proyección de etiquetas.
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Q, mesh } from './builders.js';
-import { M, concreteTexture } from './materials.js';
-import { createTerrain } from './environment.js';
+import { concreteTexture } from './materials.js';
+import { createTerrain, createSky, SKY_PRESETS } from './environment.js';
 
 export const QUALITY = {
-  high: { dpr: 2, shadow: 2048, seg: 28, shadows: true, aa: true },
-  medium: { dpr: 1.5, shadow: 1024, seg: 20, shadows: true, aa: true },
-  low: { dpr: 1, shadow: 512, seg: 12, shadows: false, aa: false },
+  high: { dpr: 2, shadow: 4096, seg: 28, shadows: true, aa: true, ao: true, samples: 4 },
+  medium: { dpr: 1.5, shadow: 2048, seg: 20, shadows: true, aa: true, ao: true, samples: 2 },
+  low: { dpr: 1, shadow: 1024, seg: 12, shadows: false, aa: false, ao: false, samples: 0 },
 };
 export function detectQuality() {
   const ua = navigator.userAgent || '';
@@ -25,83 +30,104 @@ export function applyQuality(name) {
   return q;
 }
 
-// Entorno procedural (sin HDRI externo): una "sala" con paneles luminosos → PMREM.
-function buildEnvironment(renderer) {
+// Entorno de reflejos procedural (sin HDRI externo): cielo + suelo cálido → PMREM.
+function buildReflectionEnvironment(renderer) {
   const scene = new THREE.Scene();
-  const room = new THREE.Mesh(new THREE.BoxGeometry(20, 12, 20), new THREE.MeshBasicMaterial({ color: '#9aa2a6', side: THREE.BackSide }));
-  scene.add(room);
-  const panel = (w, h, pos, rot, color = '#ffffff', intensity = 6) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color }));
-    m.material.color.multiplyScalar(intensity); m.position.set(...pos); m.rotation.set(...rot); scene.add(m);
-  };
-  panel(8, 4, [0, 5.9, 0], [Math.PI / 2, 0, 0], '#ffffff', 5);
-  panel(6, 4, [-9.9, 2, 0], [0, Math.PI / 2, 0], '#dfe9ff', 3);
-  panel(6, 4, [9.9, 2, 0], [0, -Math.PI / 2, 0], '#fff0dc', 3);
-  panel(10, 3, [0, 1, -9.9], [0, 0, 0], '#e9f0f5', 2);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshBasicMaterial({ color: '#5f6668' })); floor.rotation.x = -Math.PI / 2; floor.position.y = -5.9; scene.add(floor);
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: { top: { value: new THREE.Color('#6fa3e0').multiplyScalar(1.6) }, mid: { value: new THREE.Color('#c9dcee').multiplyScalar(1.5) }, bottom: { value: new THREE.Color('#b09468').multiplyScalar(0.9) } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 bottom; varying vec3 vP; void main(){ float h = vP.y; vec3 c = h < 0.0 ? bottom : (h < 0.25 ? mix(mid, mid, 1.0) : mix(mid, top, smoothstep(0.25, 0.9, h))); if (h < 0.0) c = mix(mid, bottom, smoothstep(0.0, -0.3, h)); gl_FragColor = vec4(c, 1.0); }',
+  }));
+  scene.add(sky);
+  const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff2d6').multiplyScalar(40) }));
+  sunDisc.position.set(30, 40, 20); scene.add(sunDisc);
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const env = pmrem.fromScene(scene, 0.04).texture;
+  const env = pmrem.fromScene(scene, 0.02).texture;
   pmrem.dispose();
   return env;
 }
 
 export function createViewer(host, { quality = 'high', onContextLost } = {}) {
-  const q = applyQuality(quality);
+  let q = applyQuality(quality);
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog('#d8dcd8', 60, 220);
-  const camera = new THREE.PerspectiveCamera(42, host.clientWidth / Math.max(1, host.clientHeight), 0.05, 600);
+  const camera = new THREE.PerspectiveCamera(42, host.clientWidth / Math.max(1, host.clientHeight), 0.05, 2500);
   camera.position.set(40, 25, 50);
   let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: q.aa, alpha: true, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false });
+    renderer = new THREE.WebGLRenderer({ antialias: q.aa, alpha: false, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false });
   } catch (e) { throw new Error('WebGL no disponible: ' + e.message); }
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q.dpr));
   renderer.setSize(host.clientWidth, host.clientHeight);
-  renderer.setClearColor(0x000000, 0);
-  renderer.shadowMap.enabled = q.shadows; renderer.shadowMap.type = THREE.PCFShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.setClearColor('#d8dcd8', 1);
+  renderer.shadowMap.enabled = q.shadows; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   host.append(renderer.domElement);
   renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); onContextLost?.(); });
 
-  scene.environment = buildEnvironment(renderer);
-  const hemi = new THREE.HemisphereLight('#eef3ff', '#6d6a5f', 0.9); scene.add(hemi);
-  const sun = new THREE.DirectionalLight('#fff4e2', 2.4); sun.position.set(30, 60, 20); sun.castShadow = q.shadows;
-  sun.shadow.mapSize.set(q.shadow, q.shadow); sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02;
-  Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 60, bottom: -30, near: 5, far: 200 });
+  scene.environment = buildReflectionEnvironment(renderer);
+  scene.environmentIntensity = 0.75;
+  const hemi = new THREE.HemisphereLight('#dfe9ff', '#a08a5c', 0.55); scene.add(hemi);
+  const SUN_DIR = new THREE.Vector3(38, 46, 22);
+  const sun = new THREE.DirectionalLight('#fff1d8', 3.0); sun.position.copy(SUN_DIR); sun.castShadow = q.shadows;
+  sun.shadow.mapSize.set(q.shadow, q.shadow); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.05; sun.shadow.radius = 2;
+  Object.assign(sun.shadow.camera, { left: -95, right: 95, top: 110, bottom: -80, near: 5, far: 320 });
   scene.add(sun); scene.add(sun.target);
-  const fill = new THREE.DirectionalLight('#cfe0f0', 0.6); fill.position.set(-40, 20, -30); scene.add(fill);
+  const fill = new THREE.DirectionalLight('#c9dcf0', 0.35); fill.position.set(-40, 20, -30); scene.add(fill);
 
-  // Suelo.
+  // Suelo neutro (escenas de taller) y cielo compartido.
   const ground = mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ map: concreteTexture(), color: '#cfd0ca', roughness: 0.95, metalness: 0 }), { cast: false });
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.01; ground.receiveShadow = q.shadows; scene.add(ground);
-  // Entorno de locación (arena, cielo, arbustos) construido bajo demanda.
+  const sky = createSky(); scene.add(sky);
   let terrain = null; let environment = 'plain';
-  const FOG_PLAIN = '#d8dcd8';
   function setEnvironment(kind) {
     environment = kind;
+    const preset = kind === 'desert' ? SKY_PRESETS.desert : SKY_PRESETS.plain;
+    sky.material.uniforms.top.value.set(preset.top); sky.material.uniforms.mid.value.set(preset.mid); sky.material.uniforms.bottom.value.set(preset.bottom);
+    sky.userData.sun.visible = kind === 'desert';
     if (kind === 'desert') {
       if (!terrain) { terrain = createTerrain(); scene.add(terrain); }
       terrain.visible = true; ground.visible = false;
-      scene.fog.color.set(terrain.userData.fogColor); scene.fog.near = 120; scene.fog.far = 420;
-      hemi.color.set('#dfe9ff'); hemi.groundColor.set('#a08a5c');
-      host.classList.add('desert');
+      scene.fog.color.set(preset.fog); scene.fog.near = 160; scene.fog.far = 1100;
+      hemi.color.set('#dfe9ff'); hemi.groundColor.set('#a08a5c'); hemi.intensity = 0.55;
+      renderer.setClearColor(preset.fog, 1);
     } else {
       if (terrain) terrain.visible = false;
-      ground.visible = true; scene.fog.color.set(FOG_PLAIN); scene.fog.near = 60; scene.fog.far = 220;
-      hemi.color.set('#eef3ff'); hemi.groundColor.set('#6d6a5f');
-      host.classList.remove('desert');
+      ground.visible = true; scene.fog.color.set(preset.fog); scene.fog.near = 60; scene.fog.far = 260;
+      hemi.color.set('#eef3ff'); hemi.groundColor.set('#6d6a5f'); hemi.intensity = 0.7;
+      renderer.setClearColor(preset.fog, 1);
     }
   }
   function rebuildTerrain() { if (terrain) { scene.remove(terrain); terrain = null; } if (environment === 'desert') setEnvironment('desert'); }
 
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI / 2.02; controls.minDistance = 0.3; controls.maxDistance = 220;
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI / 2.05; controls.minDistance = 0.3; controls.maxDistance = 260;
   controls.target.set(0, 8, 0);
-
   const root = new THREE.Group(); scene.add(root);
 
-  // Transiciones de cámara.
+  // ---------- Postprocesado ----------
+  let composer = null, gtao = null;
+  function buildComposer() {
+    if (composer) { composer.dispose?.(); composer = null; gtao = null; }
+    if (!q.ao) return;
+    const w = host.clientWidth, h = host.clientHeight;
+    const target = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: q.samples });
+    composer = new EffectComposer(renderer, target);
+    composer.setPixelRatio(Math.min(devicePixelRatio || 1, q.dpr)); composer.setSize(w, h);
+    composer.addPass(new RenderPass(scene, camera));
+    gtao = new GTAOPass(scene, camera, w, h);
+    gtao.output = GTAOPass.OUTPUT.Default;
+    gtao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.5, thickness: 1.2, scale: 1.1, samples: 12, distanceFallOff: 1.0, screenSpaceRadius: false });
+    gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, rings: 2, samples: 8 });
+    gtao.blendIntensity = 0.85;
+    composer.addPass(gtao);
+    composer.addPass(new OutputPass());
+  }
+  buildComposer();
+
+  // ---------- Transiciones de cámara ----------
   let transition = null;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function moveTo(position, target, { immediate = false, duration = 900 } = {}) {
@@ -109,7 +135,6 @@ export function createViewer(host, { quality = 'high', onContextLost } = {}) {
     transition = { from: camera.position.clone(), to: position.clone(), start: controls.target.clone(), target: target.clone(), t0: performance.now(), duration };
   }
   controls.addEventListener('start', () => { transition = null; });
-  // Encuadre de un objeto/caja: dirección de vista opcional.
   function frame(target, { radius, dir = new THREE.Vector3(1, 0.55, 1.1), padding = 1.25, immediate = false } = {}) {
     let center, r = radius;
     if (target.isVector3) center = target.clone();
@@ -134,13 +159,15 @@ export function createViewer(host, { quality = 'high', onContextLost } = {}) {
       if (t >= 1) transition = null;
     }
     controls.update();
-    sun.target.position.copy(controls.target); sun.position.copy(controls.target).add(new THREE.Vector3(30, 60, 20));
-    renderer.render(scene, camera);
+    sun.target.position.copy(controls.target); sun.position.copy(controls.target).add(SUN_DIR);
+    sky.position.copy(camera.position);
+    if (composer) composer.render(); else renderer.render(scene, camera);
     frameCallbacks.forEach((fn) => fn(now));
   }
   function resize() {
     const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return;
     camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+    if (composer) { composer.setSize(w, h); gtao?.setSize(w, h); }
   }
   new ResizeObserver(resize).observe(host);
 
@@ -157,11 +184,15 @@ export function createViewer(host, { quality = 'high', onContextLost } = {}) {
     raycaster.setFromCamera(pointer, camera);
     return raycaster.intersectObjects(objects, true)[0] || null;
   }
-  function dispose() {
-    cancelAnimationFrame(rafId);
-    renderer.dispose();
-    renderer.domElement.remove();
+  function setQualityLive(name) {
+    q = applyQuality(name);
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q.dpr));
+    renderer.shadowMap.enabled = q.shadows; sun.castShadow = q.shadows;
+    if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    sun.shadow.mapSize.set(q.shadow, q.shadow);
+    buildComposer();
   }
+  function dispose() { cancelAnimationFrame(rafId); renderer.dispose(); renderer.domElement.remove(); }
   rafId = requestAnimationFrame(loop);
-  return { scene, camera, renderer, controls, root, sun, setEnvironment, rebuildTerrain, moveTo, frame, project, pick, resize, dispose, onFrame: (fn) => { frameCallbacks.add(fn); return () => frameCallbacks.delete(fn); }, get transitioning() { return !!transition; } };
+  return { scene, camera, renderer, controls, root, sun, setEnvironment, rebuildTerrain, setQualityLive, moveTo, frame, project, pick, resize, dispose, onFrame: (fn) => { frameCallbacks.add(fn); return () => frameCallbacks.delete(fn); }, get transitioning() { return !!transition; } };
 }
